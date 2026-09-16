@@ -68,7 +68,6 @@ curl http://localhost:8080
 ### 5. Посмотреть отчёт Allure
 
 ./gradlew allureServe
----
 
 ## Примеры
 
