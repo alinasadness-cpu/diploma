@@ -39,7 +39,7 @@
 git clone https://github.com/alinasadness-cpu/diploma.git
 cd diploma
 
-2. Запустить контейнеры (MySQL, PostgreSQL, gate-simulator)
+###2. Запустить контейнеры (MySQL, PostgreSQL, gate-simulator)
 docker-compose up -d
 Проверить, что контейнеры запущены:
 docker ps
@@ -50,27 +50,27 @@ xxxxxxxxxxxx   mysql:8.0          0.0.0.0:3306->3306/tcp   mysql-diploma
 xxxxxxxxxxxx   postgres:15        0.0.0.0:5432->5432/tcp   postgres-diploma
 xxxxxxxxxxxx   node:18-alpine     0.0.0.0:9999->9999/tcp   gate-simulator
 
-3. Запустить тестируемый сервис (SUT)
+### 3. Запустить тестируемый сервис (SUT)
 java -jar aqa-shop.jar
 SUT запустится на порту 8080. Проверить:
 curl http://localhost:8080 
-4. Запустить автотесты
+### 4. Запустить автотесты
 ./gradlew test
-5. Посмотреть отчёт Allure
+### 5. Посмотреть отчёт Allure
 ./gradlew allureServe
-Примеры
-Запуск одного теста
+### Примеры
+- Запуск одного теста
 ./gradlew test --tests "ru.netology.test.PaymentTest"
 Запуск тестов в headless-режиме
 ./gradlew test -Dselenide.headless=true
-Запуск SUT с PostgreSQL
+- Запуск SUT с PostgreSQL
 По умолчанию SUT подключается к MySQL. Для использования PostgreSQL отредактируйте application.properties:
 
-properties
+### properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/app
 spring.datasource.username=app
 spring.datasource.password=pass
-Запуск эмулятора банка вручную (без Docker Compose)
+- Запуск эмулятора банка вручную (без Docker Compose)
 cd gate-simulator
 npm install
 npm start
