@@ -22,44 +22,38 @@
 
 ## Начало работы
 
-Инструкция, как получить копию проекта и запустить его на удалённом сервере.
+Инструкция, как запустить проект. Виртуальная машина (185.119.56.254) используется 
+**только для запуска контейнеров** (СУБД и эмулятор банка). Учебное приложение и 
+тесты запускаются **на локальной машине**.
 
 ### Prerequisites
 
-**На локальном ПК:**
+**На виртуальной машине (сервере):**
+
+- **Docker** и **Docker Compose** — для запуска СУБД и эмулятора банка.
+
+**На локальной машине:**
 
 - **Git** — для клонирования репозитория;
-- **SSH-клиент** — для подключения к удалённому серверу;
-- **Браузер** (Chrome или Firefox) — для UI-тестов.
-
-**На удалённом сервере:**
-
-- **Docker** и **Docker Compose** — для запуска СУБД и эмулятора банка;
 - **Java 11+** (JDK) — для запуска SUT и автотестов;
-- **Node.js 18+** и **npm** — для запуска эмулятора банковских сервисов.
+- **Браузер** (Chrome или Firefox) — для UI-тестов.
 
 ---
 
 ## Установка и запуск
 
-### 1. Подключиться к удалённому серверу
+### 1. Запустить контейнеры на виртуальной машине
+
+Подключиться к серверу:
 
 ```bash
 ssh student@185.119.56.254
 ```
 
-Ввести пароль.
-
-### 2. Клонировать репозиторий на сервер
+Перейти в папку с проектом и запустить контейнеры:
 
 ```bash
-git clone https://github.com/alinasadness-cpu/diploma.git
-cd diploma
-```
-
-### 3. Запустить контейнеры (MySQL, PostgreSQL, gate-simulator)
-
-```bash
+cd ~/diploma-materials
 docker-compose up -d
 ```
 
@@ -78,50 +72,60 @@ xxxxxxxxxxxx   postgres:15        0.0.0.0:5432->5432/tcp   postgres-diploma
 xxxxxxxxxxxx   node:18-alpine     0.0.0.0:9999->9999/tcp   gate-simulator
 ```
 
-### 4. Запустить эмулятор банка
+### 2. Скопировать материалы диплома на локальную машину
 
-Если эмулятор **не запустился** через `docker-compose`, запустите вручную:
-
-```bash
-cd gate-simulator
-npm install
-npm start &
-```
-
-Эмулятор запустится на порту **9999**.
-
-### 5. Запустить тестируемый сервис (SUT)
-
-В новом окне SSH:
+На локальном компьютере скопировала файлы с сервера:
 
 ```bash
-cd ~/diploma
-java -jar aqa-shop.jar &
+scp -r student@185.119.56.254:~/diploma-materials ./
+cd diploma-materials
 ```
 
-SUT запустится на порту **8080**. Проверить на сервере:
+### 3. Запустить SUT на локальной машине
+
+**С MySQL:**
+
+```bash
+java "-Dspring.datasource.url=jdbc:mysql://185.119.56.254:3306/app" -jar artifacts/aqa-shop.jar
+```
+
+**С PostgreSQL:**
+
+```bash
+java "-Dspring.datasource.url=jdbc:postgresql://185.119.56.254:5432/app" -jar artifacts/aqa-shop.jar
+```
+
+SUT запустится на порту **8080**. Проверить:
 
 ```bash
 curl http://localhost:8080
 ```
 
-### 6. Проверить доступность SUT с локального ПК
+### 4. Проверить доступность SUT
 
 Откройте в браузере:
 
 ```
-http://185.119.56.254:8080
+http://localhost:8080
 ```
 
 Должна открыться страница «Путешествие дня».
 
-### 7. Запустить автотесты
+### 5. Запустить автотесты на локальной машине
+
+**С MySQL:**
 
 ```bash
-./gradlew test
+./gradlew clean test "-Ddb.url=jdbc:mysql://185.119.56.254:3306/app"
 ```
 
-### 8. Посмотреть отчёт Allure
+**С PostgreSQL:**
+
+```bash
+./gradlew clean test "-Ddb.url=jdbc:postgresql://185.119.56.254:5432/app"
+```
+
+### 6. Посмотреть отчёт Allure
 
 ```bash
 ./gradlew allureServe
@@ -129,54 +133,38 @@ http://185.119.56.254:8080
 
 ---
 
-## Примеры
+## Настройка `build.gradle`
 
-### Запуск одного теста
+В файле `build.gradle` в секции `test` добавила строку:
 
-```bash
-./gradlew test --tests "ru.netology.test.PaymentTest"
+```gradle
+test {
+    useJUnitPlatform()
+    systemProperty 'db.url', System.getProperty('db.url')
+    systemProperty 'chromeoptions.prefs', System.getProperty('chromeoptions.prefs', "profile.password_manager_leak_detection=false")
+}
 ```
 
-### Запуск тестов в headless-режиме
+В классе `DbUtils`, работающем с БД, значение параметра получается так:
 
-```bash
-./gradlew test -Dselenide.headless=true
-```
-
-### Запуск SUT с PostgreSQL
-
-По умолчанию SUT подключается к MySQL. Для использования PostgreSQL отредактируйте 
-`application.properties`:
-
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/app
-spring.datasource.username=app
-spring.datasource.password=pass
-```
-
-### Копирование файлов с локального ПК на сервер
-
-Если нужно передать файлы с локального компьютера на сервер:
-
-```bash
-scp -r ./diploma student@185.119.56.254:~/
+```java
+private static final String DB_URL = System.getProperty("db.url");
 ```
 
 ---
 
 ## Остановка сервисов
 
-После завершения работы остановите контейнеры:
+После завершения работы остановить контейнеры на виртуальной машине:
 
 ```bash
 docker-compose down
 ```
 
-Остановите SUT и эмулятор банка:
+Остановить SUT на локальной машине:
 
 ```bash
 pkill -f aqa-shop.jar
-pkill -f "npm start"
 ```
 
 ---
